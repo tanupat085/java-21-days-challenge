@@ -3,75 +3,80 @@
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  function setup() {
-    const canvas = document.getElementById('falling-snow-canvas');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    return {
-      canvas,
-      canvasContext: canvas.getContext('2d'),
-      numberOfSnowBalls: 250
-    };
-  }
-
-  function createSnowBalls(canvas, numberOfSnowBalls) {
-    return [...Array(numberOfSnowBalls)].map(() => {
+  function createDucks() {
+    return [...Array(5)].map(() => {
       return {
-        x: random(0, canvas.width),
-        y: random(0, canvas.height),
-        opacity: random(0.5, 1),
-        speedX: random(-5, 5),
-        speedY: random(1, 3),
-        radius: random(2, 4)
+        x: random(0, window.innerWidth),
+        y: window.innerHeight,
+        speedX: random(-50, 50),
+        speedY: random(5, 10)
       };
     });
   }
 
-  function createSnowBallDrawer(canvasContext) {
-    return snowBall => {
-      canvasContext.beginPath();
-      canvasContext.arc(
-        snowBall.x,
-        snowBall.y,
-        snowBall.radius,
-        0,
-        Math.PI * 2
-      );
-      canvasContext.fillStyle = `rgba(255, 255, 255, ${snowBall.opacity})`;
-      canvasContext.fill();
-    };
+  function setupDuckElement(duck) {
+    const duckElem = document.createElement('div');
+    duckElem.className = 'duck';
+    duckElem.style.left = `${duck.x}px`;
+    duckElem.style.top = `${duck.y}px`;
+    document.body.appendChild(duckElem);
+
+    return { duck, duckElem };
   }
 
-  function createSnowBallMover(canvas) {
-    return snowBall => {
-      snowBall.x += snowBall.speedX;
-      snowBall.y += snowBall.speedY;
+  function getDuckBackgroundImage(duck, duckElem) {
+    const direction = duck.speedX > 0 ? 'right' : 'left';
+    return duckElem.style.backgroundImage.indexOf('1') !== -1
+      ? `url(./${direction}-2.png)`
+      : `url(./${direction}-1.png)`;
+  }
 
-      if (snowBall.x > canvas.width) {
-        snowBall.x = 0;
-      } else if (snowBall.x < 0) {
-        snowBall.x = canvas.width;
-      }
+  function moveDuck(duckElem, duck) {
+    const { left, top } = duckElem.getBoundingClientRect();
+    const outOfBoundX = duck.x < 0 || duck.x > window.innerWidth;
+    const outOfBoundY = duck.y < 0 || duck.y > window.innerHeight;
 
-      if (snowBall.y > canvas.height) {
-        snowBall.y = 0;
+    if (outOfBoundX) {
+      duck.speedX *= -1;
+    }
+
+    if (outOfBoundY) {
+      duck.speedY *= -1;
+    }
+
+    duck.x = left + duck.speedX;
+    duck.y = top - duck.speedY;
+    duckElem.style.left = `${duck.x}px`;
+    duckElem.style.top = `${duck.y}px`;
+
+    duckElem.style.backgroundImage = getDuckBackgroundImage(duck, duckElem);
+  }
+
+  function shootDuck(event) {
+    const duckElem = event.currentTarget;
+    duckElem.style.transition = 'top 2s';
+    duckElem.style.top = `${window.innerHeight}px`;
+
+    clearInterval(duckElem.interval);
+    setTimeout(() => {
+      document.body.removeChild(duckElem);
+
+      const duck = document.querySelector('.duck');
+      if (!duck) {
+        const winningElem = document.querySelector('.winning');
+        winningElem.style.opacity = 1;
       }
-    };
+    }, 2000)
   }
 
   function run() {
-    const { canvas, canvasContext, numberOfSnowBalls } = setup();
-    const snowBalls = createSnowBalls(canvas, numberOfSnowBalls);
-    const drawSnowBall = createSnowBallDrawer(canvasContext);
-    const moveSnowBall = createSnowBallMover(canvas);
+    const ducks = createDucks();
+    const duckElems = ducks.map(setupDuckElement);
 
-    setInterval(() => {
-      canvasContext.clearRect(0, 0, canvas.width, canvas.height);
-      snowBalls.forEach(drawSnowBall);
-      snowBalls.forEach(moveSnowBall);
-    }, 50);
+    duckElems.forEach(({ duck, duckElem }) => {
+      duckElem.interval = setInterval(() => moveDuck(duckElem, duck), 100);
+      duckElem.addEventListener('click', shootDuck);
+    });
   }
-
   run();
 })();
